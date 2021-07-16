@@ -15,6 +15,8 @@ extension String: LocalizedError {
 
 class RNVideoEditorUtilities {
     static let filePrefix: String = "reaction-media"
+    private static let DEFAULT_VIDEO_WIDTH=720
+    private static let DEFAULT_VIDEO_HEIGHT=1280
     
     static func requestAsset(_ source: String) throws -> AVAsset {
         var url: URL?
@@ -34,8 +36,8 @@ class RNVideoEditorUtilities {
             PHCachingImageManager().requestAVAsset(
                 forVideo: phAsset!,
                 options: options) { (asset, _, _) in
-                    avAsset = asset
-                    semaphore.signal()
+                avAsset = asset
+                semaphore.signal()
             }
             semaphore.wait()
         } else if source.contains("assets-library") {
@@ -79,5 +81,30 @@ class RNVideoEditorUtilities {
         } catch  {
             throw "Failed to clean files."
         }
+    }
+    
+    static func determineOutputVideoSize(asset: AVAsset) ->VideoSize{
+        do{
+            let track = asset.tracks(withMediaType: .video)[0]
+            let width = Int(track.naturalSize.width)
+            let height = Int(track.naturalSize.height)
+            let videoSize = VideoSize(width: width, height: height)
+//            print("RNVideoEditorUtilities: determineOutputVideoSize video size before scale: \(videoSize)")
+            applyScale(videoSize: videoSize)
+//            print("RNVideoEditorUtilities: determineOutputVideoSize video size after scale: \(videoSize)")
+            return videoSize
+        }catch{
+            return VideoSize(width: DEFAULT_VIDEO_WIDTH, height: DEFAULT_VIDEO_HEIGHT)
+        }
+    }
+    
+    private static func applyScale(videoSize: VideoSize){
+        let oldWidth = videoSize.width;
+        let oldHeight = videoSize.height;
+        let maxPixelCount = DEFAULT_VIDEO_WIDTH * DEFAULT_VIDEO_HEIGHT;
+        let newWidth = Int(round((Float(maxPixelCount * oldWidth) / Float(oldHeight)).squareRoot()));
+        let newHeight = newWidth * oldHeight / oldWidth;
+        videoSize.width = newWidth;
+        videoSize.height = newHeight;
     }
 }

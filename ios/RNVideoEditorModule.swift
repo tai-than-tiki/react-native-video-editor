@@ -11,8 +11,6 @@ import UIKit
 
 @objc(RNVideoEditorModule)
 class RNVideoEditorModule: NSObject {
-    let VIDEO_WIDTH: String = "720"
-    let VIDEO_HEIGHT: String = "1280"
     let VIDEO_FPS: Int = 30
     let VIDEO_BITRATE: Int = 4000000
     var exportSession: SDAVAssetExportSession? = nil
@@ -37,10 +35,13 @@ class RNVideoEditorModule: NSObject {
         if (timeRange != nil) {
             self.exportSession!.timeRange = timeRange!
         }
+        
+        let videoSize = RNVideoEditorUtilities.determineOutputVideoSize(asset: asset)
+        
         self.exportSession!.videoSettings = [
             AVVideoCodecKey: AVVideoCodecH264,
-            AVVideoWidthKey: self.VIDEO_WIDTH,
-            AVVideoHeightKey: self.VIDEO_HEIGHT,
+            AVVideoWidthKey: String(videoSize.width),
+            AVVideoHeightKey: String(videoSize.height),
             AVVideoCompressionPropertiesKey: [
                 AVVideoMaxKeyFrameIntervalKey: self.VIDEO_FPS,
                 AVVideoAverageBitRateKey: self.VIDEO_BITRATE,
@@ -232,12 +233,12 @@ class RNVideoEditorModule: NSObject {
             var soundTracks: [AVMutableCompositionTrack] = []
             
             if let videoTrack = compositionAsset.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
-                let audioTrack = compositionAsset.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
+               let audioTrack = compositionAsset.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
                 videoTracks.append(videoTrack)
                 soundTracks.append(audioTrack)
                 
                 if let videoAssetTrack: AVAssetTrack = videoAsset.tracks(withMediaType: .video).first,
-                    let audioAssetTrack: AVAssetTrack = audioAsset.tracks(withMediaType: .audio).first {
+                   let audioAssetTrack: AVAssetTrack = audioAsset.tracks(withMediaType: .audio).first {
                     do {
                         try videoTracks.first?.insertTimeRange(CMTimeRangeMake(kCMTimeZero, videoAssetTrack.timeRange.duration), of: videoAssetTrack, at: kCMTimeZero)
                         try soundTracks.first?.insertTimeRange(CMTimeRangeMake(kCMTimeZero, audioAssetTrack.timeRange.duration), of: audioAssetTrack, at: kCMTimeZero)
